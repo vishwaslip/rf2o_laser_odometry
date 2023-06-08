@@ -123,7 +123,7 @@ bool CLaserOdometry2DNode::setLaserPoseFromTf()
   transform.setIdentity();
   try
   {
-    tf_listener.lookupTransform(base_frame_id, last_scan.header.frame_id, ros::Time(0), transform);
+    tf_listener.lookupTransform(base_frame_id, "odom", ros::Time(0), transform);
     retrieved = true;
   }
   catch (tf::TransformException &ex)
@@ -247,6 +247,18 @@ void CLaserOdometry2DNode::publish()
   odom.twist.twist.linear.x = lin_speed;    //linear speed
   odom.twist.twist.linear.y = 0.0;
   odom.twist.twist.angular.z = ang_speed;   //angular speed
+
+  const Eigen::Matrix<float, 3, 3> cov_eigen = getIncrementCovariance();
+  odom.pose.covariance[0] = cov_eigen(0, 0);  // Variance of x
+  odom.pose.covariance[1] = cov_eigen(0, 1);                                    // Covariance of x and y
+  odom.pose.covariance[5] = cov_eigen(0, 2);                                    // Covariance of x and yaw
+  odom.pose.covariance[6] = cov_eigen(1, 0);                                    // Covariance of y and x
+  odom.pose.covariance[7] = cov_eigen(1, 1);  // Variance of y
+  odom.pose.covariance[11] = cov_eigen(1, 2);                                   // Covariance of y and yaw
+  odom.pose.covariance[30] = cov_eigen(2, 0);                                   // Covariance of yaw and x
+  odom.pose.covariance[31] = cov_eigen(2, 1);                                   // Covariance of yaw and y
+  odom.pose.covariance[35] = cov_eigen(2, 2); // Variance of yaw
+
   //publish the message
   odom_pub.publish(odom);
 }
